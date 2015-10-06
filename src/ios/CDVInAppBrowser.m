@@ -78,6 +78,7 @@
     NSString* url = [command argumentAtIndex:0];
     NSString* target = [command argumentAtIndex:1 withDefault:kInAppBrowserTargetSelf];
     NSString* options = [command argumentAtIndex:2 withDefault:@"" andClass:[NSString class]];
+    bool hideToolbarOption = [[command argumentAtIndex:3] boolValue];
 
     self.callbackId = command.callbackId;
 
@@ -94,11 +95,11 @@
         }
 
         if ([target isEqualToString:kInAppBrowserTargetSelf]) {
-            [self openInCordovaWebView:absoluteUrl withOptions:options];
+            [self openInCordovaWebView:absoluteUrl withOptions:options andhideToolbar:hideToolbarOption];
         } else if ([target isEqualToString:kInAppBrowserTargetSystem]) {
             [self openInSystem:absoluteUrl];
         } else { // _blank or anything else
-            [self openInInAppBrowser:absoluteUrl withOptions:options];
+            [self openInInAppBrowser:absoluteUrl withOptions:options andHideToolbar:hideToolbarOption];
         }
 
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
@@ -110,7 +111,7 @@
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void)openInInAppBrowser:(NSURL*)url withOptions:(NSString*)options
+- (void)openInInAppBrowser:(NSURL*)url withOptions:(NSString*)options andHideToolbar:(bool)hideToolbarOption
 {
     CDVInAppBrowserOptions* browserOptions = [CDVInAppBrowserOptions parseOptions:options];
 
@@ -138,14 +139,13 @@
 
     if (self.inAppBrowserViewController == nil) {
         NSString* originalUA = [CDVUserAgentUtil originalUserAgent];
-        self.inAppBrowserViewController = [[CDVInAppBrowserViewController alloc] initWithUserAgent:originalUA prevUserAgent:[self.commandDelegate userAgent] browserOptions: browserOptions];
+        self.inAppBrowserViewController = [[CDVInAppBrowserViewController alloc] initWithUserAgent:originalUA prevUserAgent:[self.commandDelegate userAgent] browserOptions: browserOptions andHideToolbar:hideToolbarOption];
         self.inAppBrowserViewController.navigationDelegate = self;
-
         if ([self.viewController conformsToProtocol:@protocol(CDVScreenOrientationDelegate)]) {
             self.inAppBrowserViewController.orientationDelegate = (UIViewController <CDVScreenOrientationDelegate>*)self.viewController;
         }
     }
-
+    
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
     if (browserOptions.closebuttoncaption != nil) {
@@ -226,7 +226,7 @@
     });
 }
 
-- (void)openInCordovaWebView:(NSURL*)url withOptions:(NSString*)options
+- (void)openInCordovaWebView:(NSURL*)url withOptions:(NSString*)options andhideToolbar:(bool)hideToolbarOption
 {
     if ([self.commandDelegate URLIsWhitelisted:url]) {
         NSURLRequest* request = [NSURLRequest requestWithURL:url];
@@ -236,7 +236,7 @@
         [self.webView loadRequest:request];
 #endif
     } else { // this assumes the InAppBrowser can be excepted from the white-list
-        [self openInInAppBrowser:url withOptions:options];
+        [self openInInAppBrowser:url withOptions:options andHideToolbar:hideToolbarOption];
     }
 }
 
@@ -458,7 +458,7 @@
 
 @synthesize currentURL;
 
-- (id)initWithUserAgent:(NSString*)userAgent prevUserAgent:(NSString*)prevUserAgent browserOptions: (CDVInAppBrowserOptions*) browserOptions
+- (id)initWithUserAgent:(NSString*)userAgent prevUserAgent:(NSString*)prevUserAgent browserOptions: (CDVInAppBrowserOptions*) browserOptions andHideToolbar:(BOOL)hideToolbarOption
 {
     self = [super init];
     if (self != nil) {
@@ -470,6 +470,7 @@
 #else
         _webViewDelegate = [[CDVWebViewDelegate alloc] initWithDelegate:self];
 #endif
+        self.hideToolbarOption = hideToolbarOption;
         
         [self createViews];
     }
@@ -483,7 +484,7 @@
 
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
-    webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
+    //webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
     self.webView = [[UIWebView alloc] initWithFrame:webViewBounds];
 
     self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
@@ -536,7 +537,7 @@
     self.toolbar.clearsContextBeforeDrawing = NO;
     self.toolbar.clipsToBounds = NO;
     self.toolbar.contentMode = UIViewContentModeScaleToFill;
-    self.toolbar.hidden = NO;
+    self.toolbar.hidden = self.hideToolbarOption;
     self.toolbar.multipleTouchEnabled = NO;
     self.toolbar.opaque = NO;
     self.toolbar.userInteractionEnabled = YES;
@@ -586,7 +587,7 @@
     [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
 
     self.view.backgroundColor = [UIColor grayColor];
-    [self.view addSubview:self.toolbar];
+    //[self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
 }
