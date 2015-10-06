@@ -79,6 +79,7 @@
     NSString* target = [command argumentAtIndex:1 withDefault:kInAppBrowserTargetSelf];
     NSString* options = [command argumentAtIndex:2 withDefault:@"" andClass:[NSString class]];
     bool hideToolbarOption = [[command argumentAtIndex:3] boolValue];
+    if(hideToolbarOption) hideToolbarOption = YES;
 
     self.callbackId = command.callbackId;
 
