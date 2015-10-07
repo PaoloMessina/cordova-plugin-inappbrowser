@@ -97,8 +97,6 @@ module.exports = function(strUrl, strWindowName, strWindowFeatures, showToolbar,
     };
 
     strWindowFeatures = strWindowFeatures || "";
-    alert("SHOWTOOLBAR:" +  showToolbar);
-	console.log("SHOWTOOLBAR:" +  showToolbar);
     exec(cb, cb, "InAppBrowser", "open", [strUrl, strWindowName, strWindowFeatures, showToolbar]);
     return iab;
 };
